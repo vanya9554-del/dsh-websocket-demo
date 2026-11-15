@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Resilient socket demo</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  body { font: 15px/1.5 system-ui, sans-serif; margin: 40px auto; max-width: 820px; padding: 0 20px; color: #0f172a; }
+  h1 { font-size: 22px; margin-bottom: 4px; }
+  p.hint { color: #64748b; margin-top: 0; }
+  .row { display: flex; gap: 8px; align-items: center; margin: 16px 0; flex-wrap: wrap; }
+  button { padding: 8px 14px; border-radius: 8px; border: 1px solid #cbd5e1; background: #fff; cursor: pointer; font: inherit; }
+  button:hover { background: #f8fafc; }
+  input { padding: 8px 10px; border-radius: 8px; border: 1px solid #cbd5e1; font: inherit; flex: 1; min-width: 260px; }
+  ul { list-style: none; margin: 0; padding: 0; max-height: 380px; overflow: auto; font: 13px/1.5 ui-monospace, monospace; border: 1px solid #e2e8f0; border-radius: 10px; }
+  li { padding: 6px 10px; border-bottom: 1px solid #f1f5f9; }
+  .send { margin-top: 12px; }
+</style>
+</head>
+<body>
+<h1>Resilient socket demo</h1>
+<p class="hint">Kill the connection (DevTools → Network → offline) and watch it reconnect with jittered backoff. Status badge comes from the client state machine.</p>
+
+<div class="row">
+  <input id="url" value="wss://ws.postman-echo.com/raw" aria-label="websocket url">
+  <button id="connect">Connect</button>
+  <button id="stop">Stop</button>
+</div>
+
+<div id="badge"></div>
+
+<div class="send row">
+  <input id="text" placeholder="message to send" value='{"hello":"world"}'>
+  <button id="send">Send</button>
+</div>
+
+<ul id="feed" aria-live="polite"></ul>
+
+<script type="module">
+import { ResilientSocket } from '../dist/ws-client.js';
+import { createStatusBadge, createFeedList } from '../dist/dashboard.js';
+
+const badgeHost = document.getElementById('badge');
+const feed = createFeedList();
+document.getElementById('feed').replaceWith(feed.element);
+
+let client = null;
+
+function buildClient() {
+  const url = document.getElementById('url').value.trim();
+  return new ResilientSocket({
+    url,
+    heartbeatIntervalMs: 15_000,
+    staleAfterMs: 40_000,
+    bufferSize: 200,
+    backoff: { baseMs: 500, maxMs: 10_000, jitter: 0.2 },
+  });
+}
+
+document.getElementById('connect').addEventListener('click', () => {
+  client?.stop();
+  client = buildClient();
+  badgeHost.replaceChildren(createStatusBadge(client));
+  client.on('message', (data) => feed.push(data));
+  client.on('buffered', (messages) => {
+    feed.push('replayed ' + messages.length + ' buffered message(s)');
+    messages.forEach((m) => feed.push(m));
+  });
+  client.connect();
+});
+
+document.getElementById('stop').addEventListener('click', () => client?.stop());
+
+document.getElementById('send').addEventListener('click', () => {
+  const text = document.getElementById('text').value;
+  const ok = client?.send(text) ?? false;
+  feed.push(ok ? 'sent: ' + text : 'not connected — message not sent');
+});
+</script>
+</body>
+</html>
