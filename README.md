@@ -85,3 +85,17 @@ The test file uses a fake socket that can be told to fail, hang, or emit message
 - buffers messages while offline and replays on reconnect;
 - emits the correct status transitions;
 - stops cleanly and does not schedule further attempts.
+
+## Live demo
+
+`demo/index.html` connects to a public echo websocket and renders the status badge and the feed:
+run a static server from the repo root (`npx serve .`), open `/demo/`, click **Connect**, then go
+offline in DevTools and watch the badge move to *Reconnecting* with a growing delay. The compiled
+client is committed under `dist/` so the page works without a build step.
+
+Rebuild after changing `src/`:
+
+```bash
+pnpm add -D typescript
+node node_modules/typescript/bin/tsc -p tsconfig.build.json
+```
