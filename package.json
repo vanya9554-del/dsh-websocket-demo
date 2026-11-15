@@ -1,0 +1,15 @@
+{
+  "name": "websocket-dashboard-demo",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc --noEmit",
+    "test": "node --test --experimental-strip-types test/ws-client.test.ts",
+    "demo": "tsc --noEmit && echo 'Open demo/index.html after building'"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "typescript": "^5.9.3"
+  }
+}
